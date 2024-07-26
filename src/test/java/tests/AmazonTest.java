@@ -71,7 +71,7 @@ public class AmazonTest {
     @DataProvider(name = "purchaseData")
     public Object[][] getPurchaseData() {
         ExcelUtil excelUtil = new ExcelUtil();
-        List<String[]> data = excelUtil.getExcelData("src/test/resources/testdata/PurchaseData.xlsx", "Sheet1");
+        List<String[]> data = excelUtil.getExcelData(projectpath + "src/test/resources/testdata/PurchaseData.xlsx", "Sheet1");
         return data.toArray(new Object[0][]);
     }
 
