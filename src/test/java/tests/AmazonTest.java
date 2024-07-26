@@ -4,9 +4,11 @@ import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;
 import com.aventstack.extentreports.reporter.ExtentSparkReporter;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -18,6 +20,7 @@ import utils.ScreenshotUtil;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 public class AmazonTest {
 
@@ -74,7 +77,14 @@ public class AmazonTest {
 
     @Test(dataProvider = "loginData")
     public void testLogin(String email, String password) {
-        test = extent.createTest("Login Test - " + email);
+        ExtentTest test = extent.createTest("Login Test - " + email);
+        // Open new tab for each login attempt
+        ((JavascriptExecutor) driver).executeScript("window.open('about:blank','_blank');");
+        Set<String> handles = driver.getWindowHandles();
+        String newTabHandle = handles.stream().reduce((first, second) -> second).orElse(null);
+        driver.switchTo().window(newTabHandle);
+        driver.get(configReader.getProperty("app.url"));
+
         HomePage homePage = new HomePage(driver);
         homePage.clickAccountList();
         LoginPage loginPage = new LoginPage(driver);
@@ -82,25 +92,58 @@ public class AmazonTest {
         loginPage.clickContinue();
         loginPage.enterPassword(password);
         loginPage.clickSignIn();
-        ScreenshotUtil.captureScreenshot(driver, "LoginAttempt_" + email);
-        // Add assertions to verify login success or failure
+
+        if (isElementPresent(By.id("nav-link-accountList"))) {
+            ScreenshotUtil.captureScreenshot(driver, "LoginSuccess_" + email);
+            test.pass("Login successful for user: " + email);
+            // Proceed to test other pages and functionality
+            testProductSearch();
+            testCartFunctionality();
+            testCheckout();
+        } else {
+            ScreenshotUtil.captureScreenshot(driver, "LoginFailure_" + email);
+            test.fail("Login failed for user: " + email);
+            driver.close(); // Close the tab if login fails
+            driver.switchTo().window(handles.iterator().next()); // Switch back to the original tab
+        }
     }
 
-    @Test(dataProvider = "purchaseData", dependsOnMethods = "testLogin")
-    public void testPurchase(String productName) {
-        test = extent.createTest("Purchase Test - " + productName);
+    private void testProductSearch() {
+        ExtentTest test = extent.createTest("Product Search Test");
         HomePage homePage = new HomePage(driver);
-        homePage.searchForProduct(productName);
+        homePage.searchForProduct("Laptop"); // Example product
+        Assert.assertTrue(isElementPresent(By.cssSelector(".s-main-slot .s-result-item")));
+        ScreenshotUtil.captureScreenshot(driver, "ProductSearch_Success");
+        test.pass("Product search test passed.");
+    }
+
+    private void testCartFunctionality() {
+        ExtentTest test = extent.createTest("Cart Functionality Test");
         ProductPage productPage = new ProductPage(driver);
         productPage.selectFirstProduct();
         productPage.addToCart();
         CartPage cartPage = new CartPage(driver);
         cartPage.proceedToCheckout();
+        Assert.assertTrue(isElementPresent(By.id("checkoutButton"))); // Adjust this locator as necessary
+        ScreenshotUtil.captureScreenshot(driver, "CartFunctionality_Success");
+        test.pass("Cart functionality test passed.");
+    }
+
+    private void testCheckout() {
+        ExtentTest test = extent.createTest("Checkout Test");
         CheckoutPage checkoutPage = new CheckoutPage(driver);
         checkoutPage.deliverHere();
-        ScreenshotUtil.captureScreenshot(driver, "Purchase_" + productName);
-        // Add assertions to verify purchase success or failure
+        Assert.assertTrue(isElementPresent(By.id("deliveryOptions"))); // Adjust this locator as necessary
+        ScreenshotUtil.captureScreenshot(driver, "Checkout_Success");
+        test.pass("Checkout test passed.");
+    }
+
+    private boolean isElementPresent(By locator) {
+        try {
+            driver.findElement(locator);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
-
-

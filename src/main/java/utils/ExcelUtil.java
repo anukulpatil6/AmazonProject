@@ -21,18 +21,17 @@ public class ExcelUtil {
             Sheet sheet = workbook.getSheet(sheetName);
             DataFormatter dataFormatter = new DataFormatter();
 
-            // Skip the 0th row and start from the 1st row
+
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
-            }
-
-            for(Row row : sheet){
-                int cellcount = row.getLastCellNum();
-                String[] rowData = new String[cellcount];
-                for(int i = 0;i<cellcount;i++){
-                    rowData[i] = dataFormatter.formatCellValue(row.getCell(i));
+                if (row != null) {
+                    int cellcount = row.getLastCellNum();
+                    String[] rowData = new String[cellcount];
+                    for (int i = 0; i < cellcount; i++) {
+                        rowData[i] = dataFormatter.formatCellValue(row.getCell(i));
+                    }
+                    data.add(rowData);
                 }
-                data.add(rowData);
             }
 
         } catch (FileNotFoundException ex) {
